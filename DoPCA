@@ -1,0 +1,78 @@
+#!/bin/sh
+
+#
+# generelle und default Parameter
+#
+verbose=
+relpath=". .. ../.. ../../.."
+
+name=iam-db
+
+#
+# Programm(e)
+#
+INIT=md_init
+INIT_OPTS="-u"
+
+#
+#	Optionsbehandlung
+#
+while [ $# -gt 0 ];
+	do
+		case $1 in
+			-h)	
+	echo "Usage is:";
+	echo "	"`basename $0`" [-hv] [-n <name>] <src_dim> <pca_dim>";
+	exit 1;;
+			-v)	verbose=1;;
+			-n)	name=$2; shift;;
+			-c)	nclass=$2; shift;;
+			-d)	dim=$2; shift;;
+			-tr*)	transform=$2; shift;;
+			-*)	echo "$0: unknown option $1";
+				exit 1;;
+			*)	break;;
+		esac
+		shift
+	done
+
+#
+# Argumente
+#
+src_dim=$1
+pca_dim=$2
+if [ -z "$src_dim" -o -z "$pca_dim" ]; then
+	echo "Usage is:";
+	echo "	"`basename $0`" [-hv] [-n <name>] <src_dim> <pca_dim>";
+	exit 1
+fi
+
+#
+# Stichprobenliste und Umsortierung
+#
+corpus=`find $relpath -maxdepth 1 -name $name.Corpus*.lst`
+if [ -z "$corpus" ]; then
+	echo "no training data found for '"$name"'."
+	exit 1
+fi
+corpus=`echo $corpus | cut -d" " -f1`
+if [ $verbose ]; then
+	echo "using training data in '"$corpus"'."
+fi
+
+#
+# Berechnung der Transformation
+#
+out=$name-pca.cl
+err=$out.err
+opt="-T $name.pca"
+
+command="$INIT $INIT_OPTS $opt $src_dim $corpus -d $pca_dim PCA >$out"
+echo $command
+eval "$command 2>$err"
+stat=$?
+echo "finished with status $? at "`date` >>$err
+if [ $stat -ne 0 ]; then
+	echo "$0: $INIT failed with status $stat!"
+	exit $stat
+fi

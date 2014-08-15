@@ -1,0 +1,26 @@
+#!/bin/sh
+
+name=iam-db
+task=a
+
+BASE=`echo $PWD | sed s#$name/.*\\$#$name/#`
+SOURCEDIR=$BASE/ref/
+PENDATA=$BASE
+UFVPATH=/ufv/
+
+for src in $SOURCEDIR/$name.Xeval*.chdr
+    do
+    	#
+	# create cross-validation definitions
+	#
+    	dest=`basename $src .chdr`.lst
+
+	cat $src	\
+	| sed	-e "s#^#$PENDATA$UFVPATH#"	\
+		-e "s/	/.ufv	/"	\
+	| sed "s/+/\\\\+/g"	\
+	| sed	-e "s/ / <space>? /g"	\
+		-e "s/	/	<space>? /"	\
+	| cut -f1	\
+	>$dest
+    done

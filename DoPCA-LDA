@@ -1,0 +1,94 @@
+#!/bin/sh
+
+#
+# generelle und default Parameter
+#
+verbose=
+relpath=". .. ../.. ../../.."
+
+name=iam-db
+transform=PCA
+
+#
+# Programm(e)
+#
+INIT=md_init
+
+#
+#	Optionsbehandlung
+#
+while [ $# -gt 0 ];
+	do
+		case $1 in
+			-h)	
+	echo "Usage is:";
+	echo "	"`basename $0`" [-hv] [-n <name>] [-t [PCA|LDA]] <src_dim> <dest_dim>";
+	exit 1;;
+			-v)	verbose=1;;
+			-n)	name=$2; shift;;
+			-t*)	transform=$2; shift;;
+			-*)	echo "$0: unknown option $1";
+				exit 1;;
+			*)	break;;
+		esac
+		shift
+	done
+
+#
+# Argumente
+#
+src_dim=$1
+dest_dim=$2
+if [ -z "$src_dim" -o -z "$dest_dim" ]; then
+	echo "Usage is:";
+	echo "	"`basename $0`" [-hv] [-n <name>] [-t [PCA|LDA]] <src_dim> <dest_dim>";
+	exit 1
+fi
+
+#
+# Transformationstyp
+#
+if [ $transform = "PCA" -o $transform = "pca" ]; then
+	transform=PCA
+	init_opt="-u"
+elif [ $transform = "LDA" -o $transform = "lda" ]; then
+	transform=LDA
+	init_opt=
+else
+	echo "$0: illegal transform type '"$transform"'."
+	exit 1
+fi
+
+#
+# Stichprobenliste
+#
+if [ $transform = "PCA" ]; then
+	corpus=`find $relpath -maxdepth 1 -name $name.Corpus.lst`
+else
+	corpus=`find $relpath -maxdepth 1 -name $name.Corpus*ini`
+fi
+if [ -z "$corpus" ]; then
+	echo "no corpus definition found for '"$name"'."
+	exit 1
+fi
+corpus=`echo $corpus | cut -d" " -f1`
+if [ $verbose ]; then
+	echo "using corpus definition in '"$corpus"'."
+fi
+
+#
+# Berechnung der Transformation
+#
+out=$name-ftr.cl
+err=$out.err
+opt="-T $name.ftr"
+
+command="$INIT $init_opts $opt $src_dim $corpus -d $dest_dim $transform >$out"
+echo $command
+eval "$command 2>$err"
+stat=$?
+echo "finished with status $? at "`date` >>$err
+if [ $stat -ne 0 ]; then
+	echo "$0: $INIT failed with status $stat!"
+	exit $stat
+fi
